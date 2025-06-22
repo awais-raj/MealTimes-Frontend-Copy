@@ -27,6 +27,7 @@ import EditSubscriptionPlan from './pages/admin/EditSubscriptionPlan';
 import CorporateDashboard from './pages/corporate/Dashboard';
 import CorporateAccount from './pages/CorporateAccount';
 import CorporateCheckout from './pages/CorporateCheckout';
+import SubscriptionPlans from './pages/corporate/SubscriptionPlans';
 
 import EmployeeDashboard from './pages/employee/Dashboard';
 import EmployeeCheckout from './pages/employee/Checkout';
@@ -197,6 +198,14 @@ function App() {
                     element={
                       <ProtectedRoute allowedRoles={['Company']}>
                         <CorporateAccount />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/corporate/subscription-plans" 
+                    element={
+                      <ProtectedRoute allowedRoles={['Company']}>
+                        <SubscriptionPlans />
                       </ProtectedRoute>
                     } 
                   />

@@ -27,6 +27,7 @@ export default function Navbar() {
       case 'Company':
         return [
           { to: '/corporate/dashboard', label: 'Dashboard' },
+          { to: '/corporate/subscription-plans', label: 'Subscription Plans' },
           { to: '/corporate/account', label: 'Account' },
         ];
       case 'Employee':

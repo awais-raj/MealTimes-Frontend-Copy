@@ -218,7 +218,7 @@ export const orders = {
     return response.data;
   },
   create: async (data: any) => {
-    const response = await api.post('/orders', data);
+    const response = await api.post('/order', data);
     return response.data;
   },
   getById: async (id: string) => {
@@ -243,6 +243,14 @@ export const corporate = {
   },
   getDepartments: async () => {
     const response = await api.get('/corporate/departments');
+    return response.data;
+  }
+};
+
+// ---------- Payments ----------
+export const payments = {
+  subscribeToplan: async (data: any) => {
+    const response = await api.post('/payment/subscribe', data);
     return response.data;
   }
 };

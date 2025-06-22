@@ -1,18 +1,33 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { meals } from '../lib/api';
-import { Search, Filter, UtensilsCrossed, Clock, Star, ChefHat } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { meals, orders } from '../lib/api';
+import { Search, Filter, UtensilsCrossed, Clock, Star, ChefHat, ShoppingCart, Check } from 'lucide-react';
 import { useCurrency } from '../contexts/CurrencyContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const Meals = () => {
   const { formatPrice } = useCurrency();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedAvailability, setSelectedAvailability] = useState('available');
+  const [selectedMeals, setSelectedMeals] = useState<number[]>([]);
 
   const { data: mealsResponse, isLoading } = useQuery({
     queryKey: ['all-meals'],
     queryFn: meals.getAll,
+  });
+
+  const orderMutation = useMutation({
+    mutationFn: (orderData: any) => orders.create(orderData),
+    onSuccess: () => {
+      setSelectedMeals([]);
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+    },
+    onError: (error: any) => {
+      console.error('Order failed:', error);
+    },
   });
 
   const allMeals = mealsResponse?.data || [];
@@ -29,6 +44,30 @@ const Meals = () => {
   });
 
   const categories = [...new Set(allMeals.map((meal: any) => meal.mealCategory))];
+
+  const toggleMealSelection = (mealId: number) => {
+    setSelectedMeals(prev => 
+      prev.includes(mealId) 
+        ? prev.filter(id => id !== mealId)
+        : [...prev, mealId]
+    );
+  };
+
+  const handlePlaceOrder = () => {
+    if (selectedMeals.length === 0) return;
+    
+    if (!user?.employee?.employeeID) {
+      alert('Employee ID not found. Please ensure you are logged in as an employee.');
+      return;
+    }
+
+    const orderData = {
+      EmployeeID: user.employee.employeeID,
+      Meals: selectedMeals.map(mealId => ({ MealID: mealId }))
+    };
+
+    orderMutation.mutate(orderData);
+  };
 
   if (isLoading) {
     return (
@@ -99,6 +138,47 @@ const Meals = () => {
             </div>
           </div>
         </div>
+
+        {/* Order Summary */}
+        {user?.role === 'Employee' && selectedMeals.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Selected Meals ({selectedMeals.length})
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Ready to place your order?
+                </p>
+              </div>
+              <div className="flex space-x-4">
+                <button
+                  onClick={() => setSelectedMeals([])}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Clear Selection
+                </button>
+                <button
+                  onClick={handlePlaceOrder}
+                  disabled={orderMutation.isPending}
+                  className="flex items-center px-6 py-2 bg-brand-red text-white rounded-md hover:bg-brand-orange transition-colors disabled:opacity-50"
+                >
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  {orderMutation.isPending ? 'Placing Order...' : 'Place Order'}
+                </button>
+              </div>
+            </div>
+            {orderMutation.error && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-700">
+                  {orderMutation.error instanceof Error 
+                    ? orderMutation.error.message 
+                    : 'Failed to place order. Please try again.'}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Meals Grid */}
@@ -130,6 +210,13 @@ const Meals = () => {
                     {meal.availability ? 'Available' : 'Unavailable'}
                   </span>
                 </div>
+                {user?.role === 'Employee' && selectedMeals.includes(meal.mealID) && (
+                  <div className="absolute bottom-4 right-4">
+                    <div className="bg-green-500 text-white rounded-full p-2">
+                      <Check className="h-4 w-4" />
+                    </div>
+                  </div>
+                )}
               </div>
               
               <div className="p-6">
@@ -162,16 +249,32 @@ const Meals = () => {
                     <ChefHat className="h-4 w-4 mr-1" />
                     <span>Chef {meal.chefName}</span>
                   </div>
-                  <button 
-                    className={`px-4 py-2 rounded-md transition-colors ${
-                      meal.availability
-                        ? 'bg-brand-red text-white hover:bg-brand-orange'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
-                    disabled={!meal.availability}
-                  >
-                    {meal.availability ? 'Order Now' : 'Unavailable'}
-                  </button>
+                  {user?.role === 'Employee' ? (
+                    <button 
+                      onClick={() => toggleMealSelection(meal.mealID)}
+                      className={`px-4 py-2 rounded-md transition-colors ${
+                        meal.availability
+                          ? selectedMeals.includes(meal.mealID)
+                            ? 'bg-green-500 text-white hover:bg-green-600'
+                            : 'bg-brand-red text-white hover:bg-brand-orange'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                      disabled={!meal.availability}
+                    >
+                      {selectedMeals.includes(meal.mealID) ? 'Selected' : meal.availability ? 'Select' : 'Unavailable'}
+                    </button>
+                  ) : (
+                    <button 
+                      className={`px-4 py-2 rounded-md transition-colors ${
+                        meal.availability
+                          ? 'bg-brand-red text-white hover:bg-brand-orange'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                      disabled={!meal.availability}
+                    >
+                      {meal.availability ? 'View Details' : 'Unavailable'}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
