@@ -1,16 +1,87 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { orders } from '../../lib/api';
-import { Package, Clock, CheckCircle, Utensils, Calendar, TrendingUp } from 'lucide-react';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { orders, employees } from '../../lib/api';
+import { 
+  Package, 
+  Clock, 
+  CheckCircle, 
+  Utensils, 
+  Calendar, 
+  TrendingUp,
+  User,
+  Mail,
+  Phone,
+  Building2,
+  Edit,
+  Save,
+  X
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 const EmployeeDashboard = () => {
-  const { data: myOrders, isLoading } = useQuery({
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    employeeID: 0,
+    fullName: '',
+    email: ''
+  });
+
+  const employeeId = user?.employee?.employeeID;
+
+  // Fetch employee details
+  const { data: employeeResponse, isLoading: employeeLoading } = useQuery({
+    queryKey: ['employee-details', employeeId],
+    queryFn: () => employees.getById(employeeId?.toString() || ''),
+    enabled: !!employeeId,
+  });
+
+  const { data: myOrders, isLoading: ordersLoading } = useQuery({
     queryKey: ['my-orders'],
     queryFn: orders.getMyOrders,
   });
 
-  if (isLoading) {
+  const employee = employeeResponse?.data;
+
+  // Update employee mutation
+  const updateEmployeeMutation = useMutation({
+    mutationFn: (data: any) => employees.update(employeeId?.toString() || '', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee-details', employeeId] });
+      setIsEditing(false);
+    },
+    onError: (error) => {
+      console.error('Employee update failed:', error);
+    },
+  });
+
+  const handleEdit = () => {
+    if (employee) {
+      setEditForm({
+        employeeID: employee.employeeID,
+        fullName: employee.fullName,
+        email: employee.email
+      });
+      setIsEditing(true);
+    }
+  };
+
+  const handleSave = () => {
+    updateEmployeeMutation.mutate(editForm);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditForm({
+      employeeID: 0,
+      fullName: '',
+      email: ''
+    });
+  };
+
+  if (employeeLoading || ordersLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-xl font-semibold">Loading dashboard...</div>
@@ -58,8 +129,119 @@ const EmployeeDashboard = () => {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Employee Dashboard</h1>
         <p className="mt-1 text-sm text-gray-500">
-          View your meal orders and account status
+          Welcome back, {employee?.fullName}
         </p>
+      </div>
+
+      {/* Employee Profile */}
+      <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <div className="h-12 w-12 rounded-full bg-brand-light flex items-center justify-center">
+              <User className="h-6 w-6 text-brand-red" />
+            </div>
+            <div className="ml-4">
+              <h2 className="text-xl font-bold text-gray-900">Profile Information</h2>
+              <p className="text-gray-600">Employee ID: #{employee?.employeeID}</p>
+            </div>
+          </div>
+          {!isEditing ? (
+            <button
+              onClick={handleEdit}
+              className="flex items-center px-4 py-2 bg-brand-red text-white rounded-md hover:bg-brand-orange transition-colors"
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Profile
+            </button>
+          ) : (
+            <div className="flex space-x-2">
+              <button
+                onClick={handleSave}
+                disabled={updateEmployeeMutation.isPending}
+                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {updateEmployeeMutation.isPending ? 'Saving...' : 'Save'}
+              </button>
+              <button
+                onClick={handleCancel}
+                className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <User className="h-4 w-4 inline mr-2" />
+              Full Name
+            </label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={editForm.fullName}
+                onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-brand-red focus:ring-brand-red"
+              />
+            ) : (
+              <p className="text-gray-900 font-medium">{employee?.fullName}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Mail className="h-4 w-4 inline mr-2" />
+              Email
+            </label>
+            {isEditing ? (
+              <input
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-brand-red focus:ring-brand-red"
+              />
+            ) : (
+              <p className="text-gray-900 font-medium">{employee?.email}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Phone className="h-4 w-4 inline mr-2" />
+              Phone Number
+            </label>
+            <p className="text-gray-900 font-medium">{employee?.phoneNumber}</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Building2 className="h-4 w-4 inline mr-2" />
+              Company
+            </label>
+            <p className="text-gray-900 font-medium">{employee?.companyName || 'Company Name'}</p>
+          </div>
+        </div>
+
+        {employee?.dietaryPreferences && (
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Dietary Preferences
+            </label>
+            <p className="text-gray-900 font-medium">{employee.dietaryPreferences}</p>
+          </div>
+        )}
+
+        {updateEmployeeMutation.error && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-sm text-red-700">
+              Failed to update profile. Please try again.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Stats Grid */}

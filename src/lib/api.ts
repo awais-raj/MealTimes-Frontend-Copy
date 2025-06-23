@@ -86,6 +86,30 @@ export const companies = {
   getAll: async () => {
     const response = await api.get('/CorporateCompany');
     return response.data;
+  },
+  getById: async (id: string) => {
+    const response = await api.get(`/CorporateCompany/${id}`);
+    return response.data;
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.put(`/CorporateCompany/${id}`, data);
+    return response.data;
+  },
+  getEmployees: async (companyId: string) => {
+    const response = await api.get(`/Employee/company/${companyId}`);
+    return response.data;
+  }
+};
+
+// Employees API
+export const employees = {
+  getById: async (id: string) => {
+    const response = await api.get(`/Employee/${id}`);
+    return response.data;
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.put(`/Employee/${id}`, data);
+    return response.data;
   }
 };
 

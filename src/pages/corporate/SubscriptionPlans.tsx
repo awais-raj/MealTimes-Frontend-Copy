@@ -1,13 +1,149 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { subscriptionPlans, payments } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { Check, DollarSign, Users, Calendar, Settings, CreditCard, Shield } from 'lucide-react';
+import { Check, DollarSign, Users, Calendar, Settings, CreditCard, Shield, X } from 'lucide-react';
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51234567890');
 
-const SubscriptionPlans = () => {
+const PaymentForm = ({ selectedPlan, onSuccess, onCancel }: any) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const { user } = useAuth();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const subscriptionMutation = useMutation({
+    mutationFn: async (paymentData: any) => {
+      return payments.subscribeToplan(paymentData);
+    },
+    onSuccess: () => {
+      onSuccess();
+    },
+    onError: (error: any) => {
+      console.error('Subscription failed:', error);
+      setError('Subscription failed. Please try again.');
+      setIsProcessing(false);
+    },
+  });
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      setError('Card element not found');
+      setIsProcessing(false);
+      return;
+    }
+
+    try {
+      // Create payment method
+      const { error: stripeError, paymentMethod } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+      });
+
+      if (stripeError) {
+        setError(stripeError.message || 'Payment method creation failed');
+        setIsProcessing(false);
+        return;
+      }
+
+      // For demo purposes, we'll create a token instead
+      const { error: tokenError, token } = await stripe.createToken(cardElement);
+      
+      if (tokenError) {
+        setError(tokenError.message || 'Token creation failed');
+        setIsProcessing(false);
+        return;
+      }
+
+      if (!token) {
+        setError('Failed to create payment token');
+        setIsProcessing(false);
+        return;
+      }
+
+      // Submit to backend
+      subscriptionMutation.mutate({
+        CompanyId: user?.corporateCompany?.companyID,
+        SubscriptionPlanId: selectedPlan.subscriptionPlanID,
+        StripeToken: token.id,
+      });
+
+    } catch (err) {
+      setError('An unexpected error occurred');
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Card Information
+        </label>
+        <div className="p-3 border border-gray-300 rounded-md">
+          <CardElement
+            options={{
+              style: {
+                base: {
+                  fontSize: '16px',
+                  color: '#424770',
+                  '::placeholder': {
+                    color: '#aab7c4',
+                  },
+                },
+              },
+            }}
+          />
+        </div>
+      </div>
+
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+
+      <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+        <p className="text-sm text-yellow-700">
+          <strong>Demo Mode:</strong> Use test card number 4242 4242 4242 4242 with any future expiry date and CVC.
+        </p>
+      </div>
+
+      <div className="flex space-x-4">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={!stripe || isProcessing || subscriptionMutation.isPending}
+          className="flex-1 flex items-center justify-center px-4 py-2 bg-brand-red text-white rounded-md hover:bg-brand-orange transition-colors disabled:opacity-50"
+        >
+          <CreditCard className="h-4 w-4 mr-2" />
+          {isProcessing || subscriptionMutation.isPending ? 'Processing...' : `Pay $${selectedPlan?.price}`}
+        </button>
+      </div>
+    </form>
+  );
+};
+
+const SubscriptionPlansContent = () => {
   const { user } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -17,36 +153,6 @@ const SubscriptionPlans = () => {
     queryFn: subscriptionPlans.getAll,
   });
 
-  const subscriptionMutation = useMutation({
-    mutationFn: async (paymentData: any) => {
-      const stripe = await stripePromise;
-      if (!stripe) throw new Error('Stripe failed to load');
-
-      // Create a payment method (in a real app, you'd collect card details)
-      const { token } = await stripe.createToken('card', {
-        number: '4242424242424242',
-        exp_month: 12,
-        exp_year: 2025,
-        cvc: '123',
-      });
-
-      if (!token) throw new Error('Failed to create payment token');
-
-      return payments.subscribeToplan({
-        CompanyId: user?.corporateCompany?.companyID,
-        SubscriptionPlanId: paymentData.planId,
-        StripeToken: token.id,
-      });
-    },
-    onSuccess: () => {
-      setShowPaymentModal(false);
-      setSelectedPlan(null);
-    },
-    onError: (error) => {
-      console.error('Subscription failed:', error);
-    },
-  });
-
   const plans = plansResponse?.data || [];
 
   const handleSubscribe = (plan: any) => {
@@ -54,12 +160,16 @@ const SubscriptionPlans = () => {
     setShowPaymentModal(true);
   };
 
-  const handlePayment = () => {
-    if (!selectedPlan || !user?.corporateCompany?.companyID) return;
-    
-    subscriptionMutation.mutate({
-      planId: selectedPlan.subscriptionPlanID,
-    });
+  const handlePaymentSuccess = () => {
+    setShowPaymentModal(false);
+    setSelectedPlan(null);
+    // Optionally refresh the page or show success message
+    window.location.reload();
+  };
+
+  const handlePaymentCancel = () => {
+    setShowPaymentModal(false);
+    setSelectedPlan(null);
   };
 
   if (isLoading) {
@@ -149,10 +259,18 @@ const SubscriptionPlans = () => {
         {/* Payment Modal */}
         {showPaymentModal && selectedPlan && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Confirm Subscription
-              </h3>
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Subscribe to {selectedPlan.planName}
+                </h3>
+                <button
+                  onClick={handlePaymentCancel}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
               
               <div className="mb-6">
                 <div className="bg-gray-50 rounded-lg p-4">
@@ -180,46 +298,26 @@ const SubscriptionPlans = () => {
                   <Shield className="h-4 w-4 mr-2 text-green-500" />
                   Secure payment with Stripe
                 </div>
-                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-                  <p className="text-sm text-yellow-700">
-                    <strong>Demo Mode:</strong> This will use test payment credentials. 
-                    No actual charges will be made.
-                  </p>
-                </div>
               </div>
 
-              {subscriptionMutation.error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-sm text-red-700">
-                    Subscription failed. Please try again.
-                  </p>
-                </div>
-              )}
-
-              <div className="flex space-x-4">
-                <button
-                  onClick={() => {
-                    setShowPaymentModal(false);
-                    setSelectedPlan(null);
-                  }}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handlePayment}
-                  disabled={subscriptionMutation.isPending}
-                  className="flex-1 flex items-center justify-center px-4 py-2 bg-brand-red text-white rounded-md hover:bg-brand-orange transition-colors disabled:opacity-50"
-                >
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  {subscriptionMutation.isPending ? 'Processing...' : 'Pay Now'}
-                </button>
-              </div>
+              <PaymentForm
+                selectedPlan={selectedPlan}
+                onSuccess={handlePaymentSuccess}
+                onCancel={handlePaymentCancel}
+              />
             </div>
           </div>
         )}
       </div>
     </div>
+  );
+};
+
+const SubscriptionPlans = () => {
+  return (
+    <Elements stripe={stripePromise}>
+      <SubscriptionPlansContent />
+    </Elements>
   );
 };
 
