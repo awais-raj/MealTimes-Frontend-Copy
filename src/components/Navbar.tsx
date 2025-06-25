@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Clock, Menu, LogOut, User, Settings, ChefHat, Building2, ShoppingBag } from 'lucide-react';
+import { Clock, Menu, LogOut, User, Settings, ChefHat, Building2, ShoppingBag, Truck } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Navbar() {
@@ -44,6 +44,10 @@ export default function Navbar() {
           { to: '/chef/orders', label: 'Orders' },
           { to: '/chef/profile', label: 'Profile' },
         ];
+      case 'DeliveryPerson':
+        return [
+          { to: '/delivery/dashboard', label: 'Dashboard' },
+        ];
       default:
         return [];
     }
@@ -59,6 +63,8 @@ export default function Navbar() {
         return <User className="h-5 w-5" />;
       case 'Chef':
         return <ChefHat className="h-5 w-5" />;
+      case 'DeliveryPerson':
+        return <Truck className="h-5 w-5" />;
       default:
         return null;
     }
@@ -94,7 +100,9 @@ export default function Navbar() {
                 ))}
                 <div className="flex items-center space-x-2 text-gray-700 px-3 py-2">
                   {getRoleIcon()}
-                  <span className="text-sm font-medium capitalize">{user.role}</span>
+                  <span className="text-sm font-medium capitalize">
+                    {user.role === 'DeliveryPerson' ? 'Delivery' : user.role}
+                  </span>
                 </div>
                 <button
                   onClick={handleLogout}

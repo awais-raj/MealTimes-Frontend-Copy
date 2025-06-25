@@ -4,11 +4,12 @@ import { auth } from '../lib/api';
 interface User {
   userID: number;
   email: string;
-  role: 'Admin' | 'Company' | 'Employee' | 'Chef';
+  role: 'Admin' | 'Company' | 'Employee' | 'Chef' | 'DeliveryPerson';
   admin: any | null;
   corporateCompany: any | null;
   employee: any | null;
   homeChef: any | null;
+  deliveryPerson: any | null;
 }
 
 interface AuthContextType {

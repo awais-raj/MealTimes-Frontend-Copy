@@ -22,7 +22,7 @@ const Login = () => {
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      const result =await login(data.email, data.password);
+      const result = await login(data.email, data.password);
       console.log("🧠 Result from login():", result);
     } catch (error) {
       setError('root', {
@@ -40,7 +40,8 @@ const Login = () => {
       'Admin': '/admin/dashboard',
       'Company': '/corporate/dashboard',
       'Employee': '/employee/dashboard',
-      'Chef': '/chef/dashboard'
+      'Chef': '/chef/dashboard',
+      'DeliveryPerson': '/delivery/dashboard'
     };
 
     const route = roleRoutes[user.role];

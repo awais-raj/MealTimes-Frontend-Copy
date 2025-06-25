@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
-import { companies } from '../../lib/api';
+import { companies, orders } from '../../lib/api';
 import { 
   Building2, 
   Users, 
@@ -14,7 +14,12 @@ import {
   X,
   UserPlus,
   Settings,
-  CreditCard
+  CreditCard,
+  Package,
+  Clock,
+  CheckCircle,
+  DollarSign,
+  TrendingUp
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -46,8 +51,16 @@ const CorporateDashboard = () => {
     enabled: !!companyId,
   });
 
+  // Fetch company orders
+  const { data: ordersResponse, isLoading: ordersLoading } = useQuery({
+    queryKey: ['company-orders', companyId],
+    queryFn: () => orders.getOrdersByCompany(companyId?.toString() || ''),
+    enabled: !!companyId,
+  });
+
   const company = companyResponse?.data;
   const employees = employeesResponse?.data || [];
+  const companyOrders = ordersResponse || [];
 
   // Update company mutation
   const updateCompanyMutation = useMutation({
@@ -89,7 +102,41 @@ const CorporateDashboard = () => {
     });
   };
 
-  if (companyLoading || employeesLoading) {
+  // Calculate order statistics
+  const totalOrders = companyOrders.length;
+  const pendingOrders = companyOrders.filter((order: any) => order.deliveryStatus === 'Pending').length;
+  const deliveredOrders = companyOrders.filter((order: any) => order.deliveryStatus === 'Delivered').length;
+  const totalRevenue = companyOrders.reduce((sum: number, order: any) => {
+    return sum + order.meals.reduce((mealSum: number, meal: any) => mealSum + meal.price, 0);
+  }, 0);
+
+  const getStatusIcon = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return <Clock className="h-5 w-5 text-yellow-500" />;
+      case 'preparing':
+        return <Package className="h-5 w-5 text-blue-500" />;
+      case 'delivered':
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      default:
+        return <Package className="h-5 w-5 text-gray-500" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'preparing':
+        return 'bg-blue-100 text-blue-800';
+      case 'delivered':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (companyLoading || employeesLoading || ordersLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-xl font-semibold">Loading dashboard...</div>
@@ -102,6 +149,73 @@ const CorporateDashboard = () => {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Corporate Dashboard</h1>
         <p className="text-gray-600 mt-2">Welcome back, {company?.companyName}</p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <Package className="h-6 w-6 text-brand-red" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Total Orders</dt>
+                  <dd className="text-lg font-semibold text-gray-900">{totalOrders}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <Clock className="h-6 w-6 text-yellow-500" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Pending Orders</dt>
+                  <dd className="text-lg font-semibold text-gray-900">{pendingOrders}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <Users className="h-6 w-6 text-blue-500" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Total Employees</dt>
+                  <dd className="text-lg font-semibold text-gray-900">{employees.length}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <DollarSign className="h-6 w-6 text-green-500" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Total Spent</dt>
+                  <dd className="text-lg font-semibold text-gray-900">${totalRevenue}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Company Overview */}
@@ -252,7 +366,7 @@ const CorporateDashboard = () => {
             <CreditCard className="h-8 w-8 text-brand-red" />
             <div className="ml-4">
               <h3 className="text-lg font-semibold text-gray-900">Subscription Plans</h3>
-              <p className="text-sm text-gray-600">View and manage plans</p>
+              <p className="text-sm text-gray-500">View and manage plans</p>
             </div>
           </div>
         </Link>
@@ -269,18 +383,81 @@ const CorporateDashboard = () => {
 
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="flex items-center">
-            <Calendar className="h-8 w-8 text-brand-red" />
+            <TrendingUp className="h-8 w-8 text-brand-red" />
             <div className="ml-4">
-              <h3 className="text-lg font-semibold text-gray-900">Active Since</h3>
-              <p className="text-sm text-gray-600">
-                {company?.planStartDate 
-                  ? new Date(company.planStartDate).toLocaleDateString()
-                  : 'Not subscribed'
-                }
-              </p>
+              <h3 className="text-lg font-semibold text-gray-900">Monthly Orders</h3>
+              <p className="text-2xl font-bold text-brand-red">{totalOrders}</p>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Recent Orders */}
+      <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h2 className="text-xl font-bold text-gray-900 mb-6">Recent Orders</h2>
+        {companyOrders.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Order ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Employee
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {companyOrders.slice(0, 10).map((order: any) => (
+                  <tr key={order.orderID} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm font-medium text-gray-900">#{order.orderID}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-900">Employee #{order.employeeID}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-900">
+                        {new Date(order.orderDate).toLocaleDateString()}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {getStatusIcon(order.deliveryStatus)}
+                        <span className={`ml-2 px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.deliveryStatus)}`}>
+                          {order.deliveryStatus}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm font-medium text-gray-900">
+                        ${order.meals.reduce((sum: number, meal: any) => sum + meal.price, 0)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <Package className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No orders yet</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Orders placed by your employees will appear here.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Employees List */}

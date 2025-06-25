@@ -4,7 +4,8 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { subscriptionPlans, payments } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { Check, DollarSign, Users, Calendar, Settings, CreditCard, Shield, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Check, DollarSign, Users, Calendar, Settings, CreditCard, Shield, X, CheckCircle } from 'lucide-react';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51234567890');
 
@@ -143,10 +144,38 @@ const PaymentForm = ({ selectedPlan, onSuccess, onCancel }: any) => {
   );
 };
 
+const SuccessModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <div className="text-center">
+          <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Subscription Successful!
+          </h3>
+          <p className="text-gray-600 mb-6">
+            Your subscription has been activated successfully. You can now start using the platform.
+          </p>
+          <button
+            onClick={onClose}
+            className="w-full bg-brand-red text-white py-2 px-4 rounded-md hover:bg-brand-orange transition-colors"
+          >
+            Continue to Dashboard
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SubscriptionPlansContent = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const { data: plansResponse, isLoading } = useQuery({
     queryKey: ['subscription-plans'],
@@ -163,13 +192,17 @@ const SubscriptionPlansContent = () => {
   const handlePaymentSuccess = () => {
     setShowPaymentModal(false);
     setSelectedPlan(null);
-    // Optionally refresh the page or show success message
-    window.location.reload();
+    setShowSuccessModal(true);
   };
 
   const handlePaymentCancel = () => {
     setShowPaymentModal(false);
     setSelectedPlan(null);
+  };
+
+  const handleSuccessClose = () => {
+    setShowSuccessModal(false);
+    navigate('/corporate/dashboard');
   };
 
   if (isLoading) {
@@ -308,6 +341,9 @@ const SubscriptionPlansContent = () => {
             </div>
           </div>
         )}
+
+        {/* Success Modal */}
+        <SuccessModal isOpen={showSuccessModal} onClose={handleSuccessClose} />
       </div>
     </div>
   );

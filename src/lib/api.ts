@@ -54,6 +54,10 @@ export const auth = {
   registerHomeChef: async (data: any) => {
     const response = await axios.post(`${API_URL}/User/register/chef`, data);
     return response.data;
+  },
+  registerDeliveryPerson: async (data: any) => {
+    const response = await axios.post(`${API_URL}/User/register/delivery-person`, data);
+    return response.data;
   }
 };
 
@@ -113,6 +117,26 @@ export const employees = {
   }
 };
 
+// Delivery Persons API
+export const deliveryPersons = {
+  getAll: async () => {
+    const response = await api.get('/DeliveryPerson/all');
+    return response.data;
+  },
+  getById: async (id: string) => {
+    const response = await api.get(`/DeliveryPerson/${id}`);
+    return response.data;
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.put(`/DeliveryPerson/${id}`, data);
+    return response.data;
+  },
+  getAssignedDeliveries: async (deliveryPersonId: string) => {
+    const response = await api.get(`/Delivery/delivery-person/${deliveryPersonId}`);
+    return response.data;
+  }
+};
+
 // ---------- Admin ----------
 export const admin = {
   getStats: async () => {
@@ -163,8 +187,8 @@ export const meals = {
     const response = await api.delete(`/Meal/${id}`);
     return response.data;
   },
-  updateAvailability: async (id: string, availability: boolean) => {
-    const response = await api.patch(`/meals/${id}/availability`, { availability });
+  updateAvailability: async (mealId: number, availability: boolean) => {
+    const response = await api.patch('/Meal/availability', { mealId, availability });
     return response.data;
   },
   getChefMeals: async () => {
@@ -251,6 +275,48 @@ export const orders = {
   },
   updateStatus: async (id: string, status: string) => {
     const response = await api.patch(`/orders/${id}/status`, { status });
+    return response.data;
+  },
+  // New order endpoints
+  getAllOrders: async () => {
+    const response = await api.get('/Order/all');
+    return response.data;
+  },
+  getOrdersByCompany: async (companyId: string) => {
+    const response = await api.get(`/Order/company/${companyId}`);
+    return response.data;
+  },
+  getOrdersByEmployee: async (employeeId: string) => {
+    const response = await api.get(`/Order/employee/${employeeId}`);
+    return response.data;
+  },
+  getOrdersByChef: async (chefId: string) => {
+    const response = await api.get(`/Order/chef/${chefId}`);
+    return response.data;
+  },
+  updateOrderStatus: async (data: { orderId: number; newStatus: string; chefId: number }) => {
+    const response = await api.patch('/Order/chef/update-status', data);
+    return response.data;
+  }
+};
+
+// ---------- Delivery ----------
+export const delivery = {
+  assignDelivery: async (data: {
+    orderID: number;
+    deliveryPersonID: number;
+    deliveryServiceName: string;
+    trackingNumber: string;
+  }) => {
+    const response = await api.post('/Delivery/assign', data);
+    return response.data;
+  },
+  updateDeliveryStatus: async (data: { deliveryID: number; newStatus: string }) => {
+    const response = await api.patch('/Delivery/update-status', data);
+    return response.data;
+  },
+  getDeliveriesByPerson: async (deliveryPersonId: string) => {
+    const response = await api.get(`/Delivery/delivery-person/${deliveryPersonId}`);
     return response.data;
   }
 };

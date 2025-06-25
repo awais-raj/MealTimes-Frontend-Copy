@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { useNavigate, Link } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { auth, subscriptionPlans, companies } from '../lib/api';
-import { Building2, ChefHat, User, Calendar, MapPin, Phone, Mail, ArrowRight } from 'lucide-react';
+import { Building2, ChefHat, User, Calendar, MapPin, Phone, Mail, ArrowRight, Truck } from 'lucide-react';
 
 // Discriminated union schemas for role-based validation
 const companySchema = z.object({
@@ -99,23 +99,46 @@ const Register = () => {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-2xl">
-        {/* Chef Application Banner */}
-        <div className="mb-6 bg-gradient-to-r from-brand-red to-brand-orange rounded-lg p-4 text-white">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <ChefHat className="h-8 w-8 mr-3" />
-              <div>
-                <h3 className="font-semibold">Want to become a Home Chef?</h3>
-                <p className="text-sm opacity-90">Join our chef network and start earning</p>
+        {/* Application Banners */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {/* Chef Application Banner */}
+          <div className="bg-gradient-to-r from-brand-red to-brand-orange rounded-lg p-4 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <ChefHat className="h-8 w-8 mr-3" />
+                <div>
+                  <h3 className="font-semibold">Become a Home Chef</h3>
+                  <p className="text-sm opacity-90">Join our chef network</p>
+                </div>
               </div>
+              <Link
+                to="/chef-application"
+                className="bg-white text-brand-red px-3 py-1 rounded-md font-medium hover:bg-gray-100 transition-colors flex items-center text-sm"
+              >
+                Apply
+                <ArrowRight className="h-3 w-3 ml-1" />
+              </Link>
             </div>
-            <Link
-              to="/chef-application"
-              className="bg-white text-brand-red px-4 py-2 rounded-md font-medium hover:bg-gray-100 transition-colors flex items-center"
-            >
-              Apply Now
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Link>
+          </div>
+
+          {/* Delivery Person Application Banner */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-500 rounded-lg p-4 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Truck className="h-8 w-8 mr-3" />
+                <div>
+                  <h3 className="font-semibold">Become a Delivery Person</h3>
+                  <p className="text-sm opacity-90">Start delivering meals</p>
+                </div>
+              </div>
+              <Link
+                to="/delivery-application"
+                className="bg-white text-blue-600 px-3 py-1 rounded-md font-medium hover:bg-gray-100 transition-colors flex items-center text-sm"
+              >
+                Apply
+                <ArrowRight className="h-3 w-3 ml-1" />
+              </Link>
+            </div>
           </div>
         </div>
 

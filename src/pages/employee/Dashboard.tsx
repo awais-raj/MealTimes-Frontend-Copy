@@ -14,7 +14,8 @@ import {
   Building2,
   Edit,
   Save,
-  X
+  X,
+  DollarSign
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -38,12 +39,15 @@ const EmployeeDashboard = () => {
     enabled: !!employeeId,
   });
 
-  const { data: myOrders, isLoading: ordersLoading } = useQuery({
-    queryKey: ['my-orders'],
-    queryFn: orders.getMyOrders,
+  // Fetch employee orders
+  const { data: myOrdersResponse, isLoading: ordersLoading } = useQuery({
+    queryKey: ['employee-orders', employeeId],
+    queryFn: () => orders.getOrdersByEmployee(employeeId?.toString() || ''),
+    enabled: !!employeeId,
   });
 
   const employee = employeeResponse?.data;
+  const myOrders = myOrdersResponse || [];
 
   // Update employee mutation
   const updateEmployeeMutation = useMutation({
@@ -123,6 +127,9 @@ const EmployeeDashboard = () => {
 
   const totalOrders = myOrders?.length || 0;
   const pendingOrders = myOrders?.filter((order: any) => order.deliveryStatus.toLowerCase() === 'pending').length || 0;
+  const totalSpent = myOrders?.reduce((sum: number, order: any) => {
+    return sum + order.meals.reduce((mealSum: number, meal: any) => mealSum + meal.price, 0);
+  }, 0) || 0;
 
   return (
     <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -131,6 +138,73 @@ const EmployeeDashboard = () => {
         <p className="mt-1 text-sm text-gray-500">
           Welcome back, {employee?.fullName}
         </p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <Package className="h-6 w-6 text-brand-red" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Total Orders</dt>
+                  <dd className="text-lg font-semibold text-gray-900">{totalOrders}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <Clock className="h-6 w-6 text-yellow-500" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Pending Orders</dt>
+                  <dd className="text-lg font-semibold text-gray-900">{pendingOrders}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <Calendar className="h-6 w-6 text-blue-500" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Today's Orders</dt>
+                  <dd className="text-lg font-semibold text-gray-900">{todaysOrders.length}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <DollarSign className="h-6 w-6 text-green-500" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Total Spent</dt>
+                  <dd className="text-lg font-semibold text-gray-900">${totalSpent}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Employee Profile */}
@@ -244,77 +318,6 @@ const EmployeeDashboard = () => {
         )}
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Package className="h-6 w-6 text-brand-red" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Orders</dt>
-                  <dd className="text-lg font-semibold text-gray-900">{totalOrders}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Clock className="h-6 w-6 text-yellow-500" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Pending Orders</dt>
-                  <dd className="text-lg font-semibold text-gray-900">{pendingOrders}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Calendar className="h-6 w-6 text-blue-500" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Today's Orders</dt>
-                  <dd className="text-lg font-semibold text-gray-900">{todaysOrders.length}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Utensils className="h-6 w-6 text-green-500" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Browse Meals</dt>
-                  <dd className="text-lg font-semibold text-gray-900">
-                    <Link to="/employee/meals" className="text-brand-red hover:text-brand-orange">
-                      View All
-                    </Link>
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Quick Actions */}
       <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
@@ -388,6 +391,9 @@ const EmployeeDashboard = () => {
                       </span>
                       <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.paymentStatus)}`}>
                         Payment: {order.paymentStatus}
+                      </span>
+                      <span className="text-sm font-medium text-gray-900">
+                        ${order.meals.reduce((sum: number, meal: any) => sum + meal.price, 0)}
                       </span>
                     </div>
                   </div>
