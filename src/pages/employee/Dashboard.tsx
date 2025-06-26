@@ -15,7 +15,9 @@ import {
   Edit,
   Save,
   X,
-  DollarSign
+  DollarSign,
+  Search,
+  Truck
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -29,6 +31,9 @@ const EmployeeDashboard = () => {
     fullName: '',
     email: ''
   });
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [trackingResult, setTrackingResult] = useState<any>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
 
   const employeeId = user?.employee?.employeeID;
 
@@ -85,6 +90,21 @@ const EmployeeDashboard = () => {
     });
   };
 
+  const handleTrackOrder = async () => {
+    if (!trackingNumber.trim()) return;
+    
+    setTrackingLoading(true);
+    try {
+      const result = await orders.trackOrder(trackingNumber.trim());
+      setTrackingResult(result);
+    } catch (error) {
+      console.error('Tracking failed:', error);
+      setTrackingResult({ error: 'Order not found or tracking number invalid' });
+    } finally {
+      setTrackingLoading(false);
+    }
+  };
+
   if (employeeLoading || ordersLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -101,6 +121,8 @@ const EmployeeDashboard = () => {
         return <Package className="h-5 w-5 text-blue-500" />;
       case 'delivered':
         return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case 'intransit':
+        return <Truck className="h-5 w-5 text-blue-500" />;
       default:
         return <Package className="h-5 w-5 text-gray-500" />;
     }
@@ -114,6 +136,8 @@ const EmployeeDashboard = () => {
         return 'bg-blue-100 text-blue-800';
       case 'delivered':
         return 'bg-green-100 text-green-800';
+      case 'intransit':
+        return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -205,6 +229,62 @@ const EmployeeDashboard = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Order Tracking Section */}
+      <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Track Your Order</h2>
+        <div className="flex space-x-4">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+              <input
+                type="text"
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value)}
+                placeholder="Enter tracking number (e.g., TRK1750957530449)"
+                className="pl-10 w-full rounded-md border-gray-300 shadow-sm focus:border-brand-red focus:ring-brand-red"
+              />
+            </div>
+          </div>
+          <button
+            onClick={handleTrackOrder}
+            disabled={trackingLoading || !trackingNumber.trim()}
+            className="px-6 py-2 bg-brand-red text-white rounded-md hover:bg-brand-orange transition-colors disabled:opacity-50"
+          >
+            {trackingLoading ? 'Tracking...' : 'Track Order'}
+          </button>
+        </div>
+
+        {trackingResult && (
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            {trackingResult.error ? (
+              <p className="text-red-600">{trackingResult.error}</p>
+            ) : (
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  Order #{trackingResult.orderId} - {trackingResult.trackingNumber}
+                </h3>
+                <div className="flex items-center mb-2">
+                  {getStatusIcon(trackingResult.status)}
+                  <span className={`ml-2 px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(trackingResult.status)}`}>
+                    {trackingResult.status}
+                  </span>
+                </div>
+                {trackingResult.pickedUpAt && (
+                  <p className="text-sm text-gray-600">
+                    Picked up: {new Date(trackingResult.pickedUpAt).toLocaleString()}
+                  </p>
+                )}
+                {trackingResult.deliveredAt && (
+                  <p className="text-sm text-gray-600">
+                    Delivered: {new Date(trackingResult.deliveredAt).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Employee Profile */}
@@ -383,6 +463,11 @@ const EmployeeDashboard = () => {
                         <p className="text-sm text-gray-500">
                           {order.meals?.length || 0} meal(s) ordered
                         </p>
+                        {order.trackingNumber && (
+                          <p className="text-xs text-blue-600">
+                            Tracking: {order.trackingNumber}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">

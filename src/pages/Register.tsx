@@ -5,9 +5,9 @@ import { z } from 'zod';
 import { useNavigate, Link } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { auth, subscriptionPlans, companies } from '../lib/api';
-import { Building2, ChefHat, User, Calendar, MapPin, Phone, Mail, ArrowRight, Truck } from 'lucide-react';
+import { Building2, ChefHat, User, MapPin, Phone, Mail, ArrowRight, Truck } from 'lucide-react';
 
-// Discriminated union schemas for role-based validation
+// Simplified schemas without optional subscription fields
 const companySchema = z.object({
   role: z.literal('CorporateCompany'),
   email: z.string().email('Invalid email address'),
@@ -15,10 +15,6 @@ const companySchema = z.object({
   companyName: z.string().min(2, 'Company name must be at least 2 characters'),
   phoneNumber: z.string().optional(),
   address: z.string().min(5, 'Address must be at least 5 characters'),
-  adminID: z.number().optional(),
-  subscriptionPlanID: z.number().optional(),
-  planStartDate: z.string().optional(),
-  planEndDate: z.string().optional(),
 });
 
 const employeeSchema = z.object({
@@ -39,13 +35,6 @@ const Register = () => {
   const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState<'CorporateCompany' | 'Employee'>('CorporateCompany');
 
-  // Fetch subscription plans for companies
-  const { data: subscriptionPlansData } = useQuery({
-    queryKey: ['subscription-plans'],
-    queryFn: subscriptionPlans.getAll,
-    enabled: selectedRole === 'CorporateCompany',
-  });
-
   // Fetch companies for employees
   const { data: companiesData } = useQuery({
     queryKey: ['companies'],
@@ -64,7 +53,15 @@ const Register = () => {
   const registerMutation = useMutation({
     mutationFn: (data: RegisterForm) => {
       if (data.role === 'CorporateCompany') {
-        return auth.registerCorporate(data);
+        // Send only required fields for company registration
+        const companyData = {
+          email: data.email,
+          password: data.password,
+          companyName: data.companyName,
+          phoneNumber: data.phoneNumber || null,
+          address: data.address,
+        };
+        return auth.registerCorporate(companyData);
       } else {
         return auth.registerEmployee(data);
       }
@@ -257,37 +254,6 @@ const Register = () => {
                   {'address' in errors && errors.address && (
                     <p className="mt-1 text-sm text-brand-red">{errors.address.message}</p>
                   )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Subscription Plan (Optional)
-                    </label>
-                    <select
-                      {...register('subscriptionPlanID', { valueAsNumber: true })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-red focus:ring-brand-red sm:text-sm"
-                    >
-                      <option value="">Select a plan</option>
-                      {subscriptionPlansData?.data?.map((plan: any) => (
-                        <option key={plan.subscriptionPlanID} value={plan.subscriptionPlanID}>
-                          {plan.planName} - ${plan.price} ({plan.durationInDays} days, {plan.mealLimitPerDay} meal/day, Max {plan.maxEmployees} employees)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      <Calendar className="h-4 w-4 inline mr-2" />
-                      Plan Start Date (Optional)
-                    </label>
-                    <input
-                      type="date"
-                      {...register('planStartDate')}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-red focus:ring-brand-red sm:text-sm"
-                    />
-                  </div>
                 </div>
               </>
             )}

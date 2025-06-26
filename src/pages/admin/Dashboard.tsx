@@ -11,9 +11,12 @@ import {
   CheckCircle,
   Truck,
   Filter,
-  UserPlus
+  UserPlus,
+  CreditCard,
+  Download,
+  Calendar
 } from 'lucide-react';
-import { admin, orders, deliveryPersons, delivery } from '../../lib/api';
+import { admin, orders, deliveryPersons, delivery, payments } from '../../lib/api';
 
 const AdminDashboard = () => {
   const queryClient = useQueryClient();
@@ -25,6 +28,7 @@ const AdminDashboard = () => {
     deliveryServiceName: '',
     trackingNumber: ''
   });
+  const [showReportsModal, setShowReportsModal] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin-stats'],
@@ -43,8 +47,15 @@ const AdminDashboard = () => {
     queryFn: deliveryPersons.getAll,
   });
 
+  // Fetch payments
+  const { data: paymentsResponse, isLoading: paymentsLoading } = useQuery({
+    queryKey: ['all-payments'],
+    queryFn: payments.getAllPayments,
+  });
+
   const allOrders = allOrdersResponse || [];
   const deliveryPersonsList = deliveryPersonsResponse?.data || [];
+  const allPayments = paymentsResponse || [];
 
   // Assign delivery mutation
   const assignDeliveryMutation = useMutation({
@@ -77,6 +88,58 @@ const AdminDashboard = () => {
   const totalRevenue = allOrders.reduce((sum: number, order: any) => {
     return sum + order.meals.reduce((mealSum: number, meal: any) => mealSum + meal.price, 0);
   }, 0);
+
+  // Generate Sales Report Data
+  const generateSalesReport = () => {
+    const today = new Date();
+    const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+    const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const ordersThisMonth = allOrders.filter((order: any) => 
+      new Date(order.orderDate) >= lastMonth
+    );
+    const ordersThisWeek = allOrders.filter((order: any) => 
+      new Date(order.orderDate) >= lastWeek
+    );
+
+    const revenueThisMonth = ordersThisMonth.reduce((sum: number, order: any) => {
+      return sum + order.meals.reduce((mealSum: number, meal: any) => mealSum + meal.price, 0);
+    }, 0);
+
+    const revenueThisWeek = ordersThisWeek.reduce((sum: number, order: any) => {
+      return sum + order.meals.reduce((mealSum: number, meal: any) => mealSum + meal.price, 0);
+    }, 0);
+
+    // Group orders by date for trend analysis
+    const ordersByDate = allOrders.reduce((acc: any, order: any) => {
+      const date = new Date(order.orderDate).toDateString();
+      if (!acc[date]) {
+        acc[date] = { count: 0, revenue: 0 };
+      }
+      acc[date].count += 1;
+      acc[date].revenue += order.meals.reduce((sum: number, meal: any) => sum + meal.price, 0);
+      return acc;
+    }, {});
+
+    // Top performing days
+    const topDays = Object.entries(ordersByDate)
+      .sort(([,a]: any, [,b]: any) => b.revenue - a.revenue)
+      .slice(0, 5);
+
+    return {
+      totalOrders,
+      totalRevenue,
+      ordersThisMonth: ordersThisMonth.length,
+      ordersThisWeek: ordersThisWeek.length,
+      revenueThisMonth,
+      revenueThisWeek,
+      averageOrderValue: totalRevenue / totalOrders || 0,
+      topDays,
+      ordersByDate
+    };
+  };
+
+  const salesReport = generateSalesReport();
 
   const deliveryStatuses = ['Pending', 'Preparing', 'ReadyForPickup', 'Assigned', 'InTransit', 'Delivered'];
 
@@ -134,7 +197,26 @@ const AdminDashboard = () => {
     });
   };
 
-  if (statsLoading || ordersLoading || deliveryPersonsLoading) {
+  const downloadSalesReport = () => {
+    const reportData = {
+      generatedAt: new Date().toISOString(),
+      summary: salesReport,
+      orders: allOrders,
+      payments: allPayments
+    };
+
+    const dataStr = JSON.stringify(reportData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `sales-report-${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
+  if (statsLoading || ordersLoading || deliveryPersonsLoading || paymentsLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-xl font-semibold">Loading dashboard...</div>
@@ -234,6 +316,87 @@ const AdminDashboard = () => {
         </div>
       </div>
 
+      {/* Sales Report and Payments Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* Sales Report */}
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Sales Report</h2>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setShowReportsModal(true)}
+                className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                View Details
+              </button>
+              <button
+                onClick={downloadSalesReport}
+                className="flex items-center px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-sm text-gray-600">This Month</p>
+              <p className="text-2xl font-bold text-gray-900">{salesReport.ordersThisMonth}</p>
+              <p className="text-sm text-gray-500">orders</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-sm text-gray-600">This Week</p>
+              <p className="text-2xl font-bold text-gray-900">{salesReport.ordersThisWeek}</p>
+              <p className="text-sm text-gray-500">orders</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-sm text-gray-600">Monthly Revenue</p>
+              <p className="text-2xl font-bold text-green-600">${salesReport.revenueThisMonth.toLocaleString()}</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-sm text-gray-600">Avg Order Value</p>
+              <p className="text-2xl font-bold text-blue-600">${salesReport.averageOrderValue.toFixed(2)}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Payment Records */}
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Recent Payments</h2>
+            <CreditCard className="h-6 w-6 text-brand-red" />
+          </div>
+          <div className="space-y-4 max-h-64 overflow-y-auto">
+            {allPayments.slice(0, 5).map((payment: any) => (
+              <div key={payment.paymentId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">{payment.companyName}</p>
+                  <p className="text-sm text-gray-500">
+                    {new Date(payment.paymentDate).toLocaleDateString()}
+                  </p>
+                  {payment.planName && (
+                    <p className="text-xs text-blue-600">{payment.planName}</p>
+                  )}
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-green-600">${payment.paymentAmount.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500">{payment.paymentMethod}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium text-gray-700">Total Payments:</span>
+              <span className="text-lg font-bold text-green-600">
+                ${allPayments.reduce((sum: number, p: any) => sum + p.paymentAmount, 0).toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Orders Management */}
       <div className="bg-white rounded-lg shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
@@ -328,7 +491,7 @@ const AdminDashboard = () => {
                         </button>
                       )}
                       {order.deliveryStatus === 'Assigned' && (
-                        <span className="text-sm text-gray-500">Assigned</span>
+                        <span className="text-sm text-purple-600">Assigned</span>
                       )}
                       {order.deliveryStatus === 'InTransit' && (
                         <span className="text-sm text-blue-600">In Transit</span>
@@ -357,6 +520,73 @@ const AdminDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Sales Report Modal */}
+      {showReportsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">Detailed Sales Report</h3>
+              <button
+                onClick={() => setShowReportsModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="bg-blue-50 rounded-lg p-4">
+                <h4 className="font-medium text-blue-900">Total Orders</h4>
+                <p className="text-2xl font-bold text-blue-600">{salesReport.totalOrders}</p>
+              </div>
+              <div className="bg-green-50 rounded-lg p-4">
+                <h4 className="font-medium text-green-900">Total Revenue</h4>
+                <p className="text-2xl font-bold text-green-600">${salesReport.totalRevenue.toLocaleString()}</p>
+              </div>
+              <div className="bg-purple-50 rounded-lg p-4">
+                <h4 className="font-medium text-purple-900">This Month</h4>
+                <p className="text-2xl font-bold text-purple-600">{salesReport.ordersThisMonth}</p>
+              </div>
+              <div className="bg-orange-50 rounded-lg p-4">
+                <h4 className="font-medium text-orange-900">Avg Order Value</h4>
+                <p className="text-2xl font-bold text-orange-600">${salesReport.averageOrderValue.toFixed(2)}</p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <h4 className="font-medium text-gray-900 mb-4">Top Performing Days</h4>
+              <div className="space-y-2">
+                {salesReport.topDays.map(([date, data]: any, index: number) => (
+                  <div key={date} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <span className="font-medium">#{index + 1} {date}</span>
+                      <span className="ml-2 text-sm text-gray-600">({data.count} orders)</span>
+                    </div>
+                    <span className="font-bold text-green-600">${data.revenue.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={downloadSalesReport}
+                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download Report
+              </button>
+              <button
+                onClick={() => setShowReportsModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Assign Delivery Modal */}
       {showAssignModal && selectedOrder && (

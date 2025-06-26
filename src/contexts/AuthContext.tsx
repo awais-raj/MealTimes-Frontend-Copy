@@ -34,13 +34,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const token = localStorage.getItem('token');
       if (token) {
+        // Validate token by making a request to get current user
         const userData = await auth.getCurrentUser();
         if (userData.isSuccess && userData.data?.userDto) {
           setUser(userData.data.userDto);
           console.log("✅ Set user in context:", userData.data.userDto);
+        } else {
+          // Token is invalid, remove it
+          localStorage.removeItem('token');
+          setUser(null);
         }
       }
     } catch (error) {
+      console.error('Auth check failed:', error);
+      // Token is invalid or expired, remove it
       localStorage.removeItem('token');
       setUser(null);
     } finally {

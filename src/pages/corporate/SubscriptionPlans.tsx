@@ -2,19 +2,20 @@ import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { subscriptionPlans, payments } from '../../lib/api';
+import { subscriptionPlans, payments, companies } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Check, DollarSign, Users, Calendar, Settings, CreditCard, Shield, X, CheckCircle } from 'lucide-react';
+import { Check, DollarSign, Users, Calendar, Settings, CreditCard, Shield, X, CheckCircle, AlertTriangle } from 'lucide-react';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51234567890');
 
-const PaymentForm = ({ selectedPlan, onSuccess, onCancel }: any) => {
+const PaymentForm = ({ selectedPlan, onSuccess, onCancel, hasActivePlan }: any) => {
   const stripe = useStripe();
   const elements = useElements();
   const { user } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmOverride, setConfirmOverride] = useState(false);
 
   const subscriptionMutation = useMutation({
     mutationFn: async (paymentData: any) => {
@@ -32,6 +33,11 @@ const PaymentForm = ({ selectedPlan, onSuccess, onCancel }: any) => {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    
+    if (hasActivePlan && !confirmOverride) {
+      setError('Please confirm that you want to override your current subscription.');
+      return;
+    }
     
     if (!stripe || !elements) {
       return;
@@ -90,6 +96,35 @@ const PaymentForm = ({ selectedPlan, onSuccess, onCancel }: any) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {hasActivePlan && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+          <div className="flex">
+            <AlertTriangle className="h-5 w-5 text-yellow-400 mr-3 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-medium text-yellow-800">
+                Active Subscription Warning
+              </h3>
+              <p className="text-sm text-yellow-700 mt-1">
+                You currently have an active subscription plan. Subscribing to this new plan will cancel your current subscription and replace it with the new one.
+              </p>
+              <div className="mt-3">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={confirmOverride}
+                    onChange={(e) => setConfirmOverride(e.target.checked)}
+                    className="rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
+                  />
+                  <span className="ml-2 text-sm text-yellow-800">
+                    I understand and want to proceed with the new subscription
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Card Information
@@ -133,7 +168,7 @@ const PaymentForm = ({ selectedPlan, onSuccess, onCancel }: any) => {
         </button>
         <button
           type="submit"
-          disabled={!stripe || isProcessing || subscriptionMutation.isPending}
+          disabled={!stripe || isProcessing || subscriptionMutation.isPending || (hasActivePlan && !confirmOverride)}
           className="flex-1 flex items-center justify-center px-4 py-2 bg-brand-red text-white rounded-md hover:bg-brand-orange transition-colors disabled:opacity-50"
         >
           <CreditCard className="h-4 w-4 mr-2" />
@@ -182,7 +217,16 @@ const SubscriptionPlansContent = () => {
     queryFn: subscriptionPlans.getAll,
   });
 
+  // Fetch company details to check for active subscription
+  const { data: companyResponse } = useQuery({
+    queryKey: ['company-details', user?.corporateCompany?.companyID],
+    queryFn: () => companies.getById(user?.corporateCompany?.companyID?.toString() || ''),
+    enabled: !!user?.corporateCompany?.companyID,
+  });
+
   const plans = plansResponse?.data || [];
+  const company = companyResponse?.data;
+  const hasActivePlan = company?.activePlanName;
 
   const handleSubscribe = (plan: any) => {
     setSelectedPlan(plan);
@@ -222,6 +266,16 @@ const SubscriptionPlansContent = () => {
           <p className="mt-4 text-xl text-gray-600">
             Choose the perfect meal plan for your company
           </p>
+          {hasActivePlan && (
+            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-md p-4 max-w-2xl mx-auto">
+              <p className="text-blue-800">
+                <strong>Current Plan:</strong> {company.activePlanName}
+              </p>
+              <p className="text-sm text-blue-600 mt-1">
+                You can upgrade or change your plan at any time.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Plans Grid */}
@@ -282,7 +336,7 @@ const SubscriptionPlansContent = () => {
                   onClick={() => handleSubscribe(plan)}
                   className="w-full bg-brand-red text-white py-3 px-4 rounded-md hover:bg-brand-orange transition-colors font-medium"
                 >
-                  Subscribe Now
+                  {hasActivePlan && company.activePlanName === plan.planName ? 'Current Plan' : 'Subscribe Now'}
                 </button>
               </div>
             </div>
@@ -337,6 +391,7 @@ const SubscriptionPlansContent = () => {
                 selectedPlan={selectedPlan}
                 onSuccess={handlePaymentSuccess}
                 onCancel={handlePaymentCancel}
+                hasActivePlan={hasActivePlan}
               />
             </div>
           </div>

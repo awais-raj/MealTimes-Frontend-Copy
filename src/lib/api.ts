@@ -297,6 +297,10 @@ export const orders = {
   updateOrderStatus: async (data: { orderId: number; newStatus: string; chefId: number }) => {
     const response = await api.patch('/Order/chef/update-status', data);
     return response.data;
+  },
+  trackOrder: async (trackingNumber: string) => {
+    const response = await api.get(`/Order/track/${trackingNumber}`);
+    return response.data;
   }
 };
 
@@ -341,6 +345,10 @@ export const corporate = {
 export const payments = {
   subscribeToplan: async (data: any) => {
     const response = await api.post('/payment/subscribe', data);
+    return response.data;
+  },
+  getAllPayments: async () => {
+    const response = await api.get('/Payments/all');
     return response.data;
   }
 };
