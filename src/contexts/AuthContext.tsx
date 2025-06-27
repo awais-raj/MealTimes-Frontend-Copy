@@ -22,6 +22,41 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// JWT token validation function
+const isTokenValid = (token: string): boolean => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const currentTime = Date.now() / 1000;
+    return payload.exp > currentTime;
+  } catch (error) {
+    return false;
+  }
+};
+
+// Extract user data from JWT token
+const getUserFromToken = (token: string): User | null => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    
+    // Extract user data from JWT claims
+    const userData: User = {
+      userID: parseInt(payload.sub || payload.userId || payload.id),
+      email: payload.email,
+      role: payload.role,
+      admin: payload.admin ? JSON.parse(payload.admin) : null,
+      corporateCompany: payload.corporateCompany ? JSON.parse(payload.corporateCompany) : null,
+      employee: payload.employee ? JSON.parse(payload.employee) : null,
+      homeChef: payload.homeChef ? JSON.parse(payload.homeChef) : null,
+      deliveryPerson: payload.deliveryPerson ? JSON.parse(payload.deliveryPerson) : null,
+    };
+    
+    return userData;
+  } catch (error) {
+    console.error('Error parsing token:', error);
+    return null;
+  }
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,17 +68,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkAuth = async () => {
     try {
       const token = localStorage.getItem('token');
-      if (token) {
-        // Validate token by making a request to get current user
-        const userData = await auth.getCurrentUser();
-        if (userData.isSuccess && userData.data?.userDto) {
-          setUser(userData.data.userDto);
-          console.log("✅ Set user in context:", userData.data.userDto);
+      if (token && isTokenValid(token)) {
+        const userData = getUserFromToken(token);
+        if (userData) {
+          setUser(userData);
+          console.log("✅ Set user from token:", userData);
         } else {
           // Token is invalid, remove it
           localStorage.removeItem('token');
           setUser(null);
         }
+      } else {
+        // Token is expired or invalid, remove it
+        localStorage.removeItem('token');
+        setUser(null);
       }
     } catch (error) {
       console.error('Auth check failed:', error);
@@ -62,9 +100,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error('Login failed');
     }
 
-    localStorage.setItem('token', response.data.token);
-    setUser(response.data.userDto);
-    return response.data.userDto;
+    const token = response.data.token;
+    localStorage.setItem('token', token);
+    
+    // Extract user data from token
+    const userData = getUserFromToken(token);
+    if (userData) {
+      setUser(userData);
+      return userData;
+    } else {
+      throw new Error('Invalid token received');
+    }
   };
 
   const logout = () => {

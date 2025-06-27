@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { meals, orders } from '../lib/api';
-import { Search, Filter, UtensilsCrossed, Clock, Star, ChefHat, ShoppingCart, Check } from 'lucide-react';
+import { Search, Filter, UtensilsCrossed, Clock, Star, ChefHat, ShoppingCart, Check, CheckCircle, X, AlertTriangle } from 'lucide-react';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -13,6 +13,8 @@ const Meals = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedAvailability, setSelectedAvailability] = useState('available');
   const [selectedMeals, setSelectedMeals] = useState<number[]>([]);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [orderResult, setOrderResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const { data: mealsResponse, isLoading } = useQuery({
     queryKey: ['all-meals'],
@@ -21,12 +23,17 @@ const Meals = () => {
 
   const orderMutation = useMutation({
     mutationFn: (orderData: any) => orders.create(orderData),
-    onSuccess: () => {
+    onSuccess: (response) => {
       setSelectedMeals([]);
       queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      setOrderResult({ success: true, message: 'Order placed successfully!' });
+      setShowOrderModal(true);
     },
     onError: (error: any) => {
       console.error('Order failed:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to place order. Please try again.';
+      setOrderResult({ success: false, message: errorMessage });
+      setShowOrderModal(true);
     },
   });
 
@@ -57,7 +64,8 @@ const Meals = () => {
     if (selectedMeals.length === 0) return;
     
     if (!user?.employee?.employeeID) {
-      alert('Employee ID not found. Please ensure you are logged in as an employee.');
+      setOrderResult({ success: false, message: 'Employee ID not found. Please ensure you are logged in as an employee.' });
+      setShowOrderModal(true);
       return;
     }
 
@@ -67,6 +75,11 @@ const Meals = () => {
     };
 
     orderMutation.mutate(orderData);
+  };
+
+  const closeOrderModal = () => {
+    setShowOrderModal(false);
+    setOrderResult(null);
   };
 
   if (isLoading) {
@@ -168,15 +181,6 @@ const Meals = () => {
                 </button>
               </div>
             </div>
-            {orderMutation.error && (
-              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-sm text-red-700">
-                  {orderMutation.error instanceof Error 
-                    ? orderMutation.error.message 
-                    : 'Failed to place order. Please try again.'}
-                </p>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -296,6 +300,41 @@ const Meals = () => {
           </div>
         )}
       </div>
+
+      {/* Order Result Modal */}
+      {showOrderModal && orderResult && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="text-center">
+              {orderResult.success ? (
+                <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+              ) : (
+                <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+              )}
+              <h3 className={`text-lg font-semibold mb-2 ${
+                orderResult.success ? 'text-green-900' : 'text-red-900'
+              }`}>
+                {orderResult.success ? 'Order Successful!' : 'Order Failed'}
+              </h3>
+              <p className={`mb-6 ${
+                orderResult.success ? 'text-green-700' : 'text-red-700'
+              }`}>
+                {orderResult.message}
+              </p>
+              <button
+                onClick={closeOrderModal}
+                className={`w-full py-2 px-4 rounded-md transition-colors ${
+                  orderResult.success 
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-red-600 text-white hover:bg-red-700'
+                }`}
+              >
+                {orderResult.success ? 'Continue' : 'Try Again'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

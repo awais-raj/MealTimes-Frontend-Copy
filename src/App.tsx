@@ -14,6 +14,7 @@ import About from './pages/About';
 import Support from './pages/Support';
 import ChefApplication from './pages/ChefApplication';
 import DeliveryPersonApplication from './pages/DeliveryPersonApplication';
+import PublicMeals from './pages/PublicMeals';
 
 // Protected Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -113,6 +114,7 @@ function App() {
                   <Route path="/delivery-application" element={<DeliveryPersonApplication />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/support" element={<Support />} />
+                  <Route path="/meals" element={<PublicMeals />} />
 
                   {/* Dashboard Redirect */}
                   <Route 
