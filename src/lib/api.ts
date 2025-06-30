@@ -301,6 +301,10 @@ export const orders = {
   trackOrder: async (trackingNumber: string) => {
     const response = await api.get(`/Order/track/${trackingNumber}`);
     return response.data;
+  },
+  cancelOrder: async (orderId: number) => {
+    const response = await api.delete(`/Order/cancel/${orderId}`);
+    return response.data;
   }
 };
 

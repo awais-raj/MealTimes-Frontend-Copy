@@ -17,7 +17,9 @@ import {
   X,
   DollarSign,
   Search,
-  Truck
+  Truck,
+  XCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -34,6 +36,9 @@ const EmployeeDashboard = () => {
   const [trackingNumber, setTrackingNumber] = useState('');
   const [trackingResult, setTrackingResult] = useState<any>(null);
   const [trackingLoading, setTrackingLoading] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedOrderForCancel, setSelectedOrderForCancel] = useState<any>(null);
+  const [cancelResult, setCancelResult] = useState<any>(null);
 
   const employeeId = user?.employee?.employeeID;
 
@@ -63,6 +68,29 @@ const EmployeeDashboard = () => {
     },
     onError: (error) => {
       console.error('Employee update failed:', error);
+    },
+  });
+
+  // Cancel order mutation
+  const cancelOrderMutation = useMutation({
+    mutationFn: (orderId: number) => orders.cancelOrder(orderId),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['employee-orders', employeeId] });
+      setCancelResult({
+        success: true,
+        message: response.message || 'Order cancelled successfully!'
+      });
+      setShowCancelModal(false);
+      setSelectedOrderForCancel(null);
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Failed to cancel order';
+      setCancelResult({
+        success: false,
+        message: errorMessage
+      });
+      setShowCancelModal(false);
+      setSelectedOrderForCancel(null);
     },
   });
 
@@ -103,6 +131,40 @@ const EmployeeDashboard = () => {
     } finally {
       setTrackingLoading(false);
     }
+  };
+
+  const handleCancelOrder = (order: any) => {
+    setSelectedOrderForCancel(order);
+    setShowCancelModal(true);
+  };
+
+  const confirmCancelOrder = () => {
+    if (selectedOrderForCancel) {
+      cancelOrderMutation.mutate(selectedOrderForCancel.orderID);
+    }
+  };
+
+  const closeCancelModal = () => {
+    setShowCancelModal(false);
+    setSelectedOrderForCancel(null);
+  };
+
+  const closeCancelResult = () => {
+    setCancelResult(null);
+  };
+
+  // Check if order can be cancelled (within 5 minutes and not preparing/ready)
+  const canCancelOrder = (order: any) => {
+    const orderTime = new Date(order.orderDate);
+    const now = new Date();
+    const timeDiff = (now.getTime() - orderTime.getTime()) / (1000 * 60); // in minutes
+    
+    return timeDiff <= 5 && 
+           order.deliveryStatus !== 'Preparing' && 
+           order.deliveryStatus !== 'ReadyForPickup' &&
+           order.deliveryStatus !== 'Assigned' &&
+           order.deliveryStatus !== 'InTransit' &&
+           order.deliveryStatus !== 'Delivered';
   };
 
   if (employeeLoading || ordersLoading) {
@@ -480,6 +542,14 @@ const EmployeeDashboard = () => {
                       <span className="text-sm font-medium text-gray-900">
                         ${order.meals.reduce((sum: number, meal: any) => sum + meal.price, 0)}
                       </span>
+                      {canCancelOrder(order) && (
+                        <button
+                          onClick={() => handleCancelOrder(order)}
+                          className="text-red-600 hover:text-red-900 text-sm font-medium"
+                        >
+                          Cancel
+                        </button>
+                      )}
                     </div>
                   </div>
                 </li>
@@ -505,6 +575,75 @@ const EmployeeDashboard = () => {
           )}
         </div>
       </div>
+
+      {/* Cancel Order Confirmation Modal */}
+      {showCancelModal && selectedOrderForCancel && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <AlertTriangle className="h-6 w-6 text-yellow-500 mr-3" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Cancel Order #{selectedOrderForCancel.orderID}
+              </h3>
+            </div>
+            
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to cancel this order? This action cannot be undone.
+            </p>
+            
+            <div className="flex space-x-4">
+              <button
+                onClick={closeCancelModal}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Keep Order
+              </button>
+              <button
+                onClick={confirmCancelOrder}
+                disabled={cancelOrderMutation.isPending}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {cancelOrderMutation.isPending ? 'Cancelling...' : 'Cancel Order'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Result Modal */}
+      {cancelResult && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="text-center">
+              {cancelResult.success ? (
+                <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+              ) : (
+                <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+              )}
+              <h3 className={`text-lg font-semibold mb-2 ${
+                cancelResult.success ? 'text-green-900' : 'text-red-900'
+              }`}>
+                {cancelResult.success ? 'Order Cancelled' : 'Cancellation Failed'}
+              </h3>
+              <p className={`mb-6 ${
+                cancelResult.success ? 'text-green-700' : 'text-red-700'
+              }`}>
+                {cancelResult.message}
+              </p>
+              <button
+                onClick={closeCancelResult}
+                className={`w-full py-2 px-4 rounded-md transition-colors ${
+                  cancelResult.success 
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-red-600 text-white hover:bg-red-700'
+                }`}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
