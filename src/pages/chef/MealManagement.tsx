@@ -25,7 +25,7 @@ const MealManagement = () => {
 
   const toggleAvailabilityMutation = useMutation({
     mutationFn: ({ id, availability }: { id: string; availability: boolean }) =>
-      meals.updateAvailability(id, availability),
+      meals.updateAvailability(Number(id), availability),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chef-meals', chefId] });
     },

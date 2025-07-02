@@ -38,7 +38,7 @@ export const auth = {
     return response.data;
   },
   getCurrentUser: async () => {
-    const response = await api.get('/auth/currentUser');
+    const response = await api.get('/User/current');
     return response.data;
   },
 
@@ -128,11 +128,11 @@ export const deliveryPersons = {
     return response.data;
   },
   update: async (id: string, data: any) => {
-    const response = await api.put(`/DeliveryPerson/${id}`, data);
+    const response = await api.put(`/DeliveryPerson`, data);
     return response.data;
   },
   getAssignedDeliveries: async (deliveryPersonId: string) => {
-    const response = await api.get(`/Delivery/delivery-person/${deliveryPersonId}`);
+    const response = await api.get(`/Delivery/person/${deliveryPersonId}`);
     return response.data;
   }
 };
@@ -303,7 +303,7 @@ export const orders = {
     return response.data;
   },
   cancelOrder: async (orderId: number) => {
-    const response = await api.delete(`/Order/cancel/${orderId}`);
+    const response = await api.patch(`/Order/cancel/${orderId}`);
     return response.data;
   }
 };
@@ -320,11 +320,11 @@ export const delivery = {
     return response.data;
   },
   updateDeliveryStatus: async (data: { deliveryID: number; newStatus: string }) => {
-    const response = await api.patch('/Delivery/update-status', data);
+    const response = await api.put('/Delivery/update-status', data);
     return response.data;
   },
   getDeliveriesByPerson: async (deliveryPersonId: string) => {
-    const response = await api.get(`/Delivery/delivery-person/${deliveryPersonId}`);
+    const response = await api.get(`/Delivery/person/${deliveryPersonId}`);
     return response.data;
   }
 };
@@ -348,11 +348,29 @@ export const corporate = {
 // ---------- Payments ----------
 export const payments = {
   subscribeToplan: async (data: any) => {
-    const response = await api.post('/payment/subscribe', data);
+    const response = await api.post('/Payments/subscribe', data);
     return response.data;
   },
   getAllPayments: async () => {
     const response = await api.get('/Payments/all');
+    return response.data;
+  }
+};
+
+// ---------- Dietary Preferences ----------
+export const dietaryPreferences = {
+  getById: async (employeeId: string) => {
+    const response = await api.get(`/dietary-preferences/${employeeId}`);
+    return response.data;
+  },
+  createOrUpdate: async (employeeId: string, data: {
+    employeeId: number;
+    allergies: string[];
+    preferences: string[];
+    restrictions: string[];
+    customNotes?: string;
+  }) => {
+    const response = await api.post(`/dietary-preferences/${employeeId}`, data);
     return response.data;
   }
 };

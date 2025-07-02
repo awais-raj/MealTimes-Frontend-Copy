@@ -28,11 +28,9 @@ import EditSubscriptionPlan from './pages/admin/EditSubscriptionPlan';
 
 import CorporateDashboard from './pages/corporate/Dashboard';
 import CorporateAccount from './pages/CorporateAccount';
-import CorporateCheckout from './pages/CorporateCheckout';
 import SubscriptionPlans from './pages/corporate/SubscriptionPlans';
 
 import EmployeeDashboard from './pages/employee/Dashboard';
-import EmployeeCheckout from './pages/employee/Checkout';
 import DietaryPreferences from './pages/employee/DietaryPreferences';
 import Feedback from './pages/employee/Feedback';
 import Meals from './pages/Meals';
@@ -63,16 +61,20 @@ type ProtectedRouteProps = {
 };
 
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
-  const { user, isAuthenticated } = useAuth();
-  
+  const { user, isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>; // or a spinner
+  }
+
   if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
-  
+
   if (!user || !allowedRoles.includes(user.role)) {
-    return <Navigate to="/" />;
+    return <Navigate to="/" replace />;
   }
-  
+
   return <>{children}</>;
 };
 
@@ -112,9 +114,9 @@ function App() {
                   <Route path="/register" element={<Register />} />
                   <Route path="/chef-application" element={<ChefApplication />} />
                   <Route path="/delivery-application" element={<DeliveryPersonApplication />} />
+                  <Route path="/meals" element={<PublicMeals />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/support" element={<Support />} />
-                  <Route path="/meals" element={<PublicMeals />} />
 
                   {/* Dashboard Redirect */}
                   <Route 
@@ -217,15 +219,6 @@ function App() {
                       </ProtectedRoute>
                     } 
                   />
-                  <Route 
-                    path="/corporate/checkout/:planId" 
-                    element={
-                      <ProtectedRoute allowedRoles={['Company']}>
-                        <CorporateCheckout />
-                      </ProtectedRoute>
-                    } 
-                  />
-
                   {/* Employee Routes */}
                   <Route 
                     path="/employee/dashboard" 
@@ -240,14 +233,6 @@ function App() {
                     element={
                       <ProtectedRoute allowedRoles={['Employee']}>
                         <Meals />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/employee/checkout/:mealId" 
-                    element={
-                      <ProtectedRoute allowedRoles={['Employee']}>
-                        <EmployeeCheckout />
                       </ProtectedRoute>
                     } 
                   />

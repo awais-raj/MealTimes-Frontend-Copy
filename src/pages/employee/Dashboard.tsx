@@ -153,20 +153,6 @@ const EmployeeDashboard = () => {
     setCancelResult(null);
   };
 
-  // Check if order can be cancelled (within 5 minutes and not preparing/ready)
-  const canCancelOrder = (order: any) => {
-    const orderTime = new Date(order.orderDate);
-    const now = new Date();
-    const timeDiff = (now.getTime() - orderTime.getTime()) / (1000 * 60); // in minutes
-    
-    return timeDiff <= 5 && 
-           order.deliveryStatus !== 'Preparing' && 
-           order.deliveryStatus !== 'ReadyForPickup' &&
-           order.deliveryStatus !== 'Assigned' &&
-           order.deliveryStatus !== 'InTransit' &&
-           order.deliveryStatus !== 'Delivered';
-  };
-
   if (employeeLoading || ordersLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -510,7 +496,7 @@ const EmployeeDashboard = () => {
         <div className="border-t border-gray-200">
           {myOrders && myOrders.length > 0 ? (
             <ul className="divide-y divide-gray-200">
-              {myOrders.slice(0, 5).map((order: any) => (
+              {myOrders.map((order: any) => (
                 <li key={order.orderID} className="px-4 py-4 hover:bg-gray-50">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
@@ -542,14 +528,12 @@ const EmployeeDashboard = () => {
                       <span className="text-sm font-medium text-gray-900">
                         ${order.meals.reduce((sum: number, meal: any) => sum + meal.price, 0)}
                       </span>
-                      {canCancelOrder(order) && (
-                        <button
+                      <button
                           onClick={() => handleCancelOrder(order)}
                           className="text-red-600 hover:text-red-900 text-sm font-medium"
                         >
                           Cancel
                         </button>
-                      )}
                     </div>
                   </div>
                 </li>

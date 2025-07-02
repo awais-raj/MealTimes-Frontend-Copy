@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { generateSalesReportPDF } from '../../lib/pdfGenerator';
 import {
   BarChart3,
   Users,
@@ -198,23 +199,8 @@ const AdminDashboard = () => {
   };
 
   const downloadSalesReport = () => {
-    const reportData = {
-      generatedAt: new Date().toISOString(),
-      summary: salesReport,
-      orders: allOrders,
-      payments: allPayments
-    };
-
-    const dataStr = JSON.stringify(reportData, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
-    const exportFileDefaultName = `sales-report-${new Date().toISOString().split('T')[0]}.json`;
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-  };
+  generateSalesReportPDF(salesReport, allOrders, allPayments);
+};
 
   if (statsLoading || ordersLoading || deliveryPersonsLoading || paymentsLoading) {
     return (
@@ -368,7 +354,7 @@ const AdminDashboard = () => {
             <CreditCard className="h-6 w-6 text-brand-red" />
           </div>
           <div className="space-y-4 max-h-64 overflow-y-auto">
-            {allPayments.slice(0, 5).map((payment: any) => (
+            {allPayments.map((payment: any) => (
               <div key={payment.paymentId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
                   <p className="font-medium text-gray-900">{payment.companyName}</p>

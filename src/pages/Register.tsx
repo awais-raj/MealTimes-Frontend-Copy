@@ -43,7 +43,7 @@ const Register = () => {
   });
 
   // Use the discriminated union schema for validation
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<RegisterForm>({
+  const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       role: selectedRole,
@@ -76,7 +76,12 @@ const Register = () => {
 
   const handleRoleChange = (role: 'CorporateCompany' | 'Employee') => {
     setSelectedRole(role);
-    reset({ role });
+    reset({});
+    setValue('role', role);
+    setTimeout(() => {
+      // @ts-ignore: register is typed for both roles, but only one is active
+      setValue('role', role);
+    }, 0);
   };
 
   const roles = [

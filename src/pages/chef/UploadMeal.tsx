@@ -6,6 +6,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { UtensilsCrossed, Clock, DollarSign, Tag, FileImage, Eye, Upload } from 'lucide-react';
 import { meals } from '../../lib/api';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
 
 const mealSchema = z.object({
@@ -62,6 +63,8 @@ const UploadMeal = () => {
     'Soup'
   ];
 
+  const queryClient = useQueryClient();
+
   const uploadMutation = useMutation({
     mutationFn: async (data: MealForm) => {
       // Ensure we have a valid chef ID
@@ -80,7 +83,10 @@ const UploadMeal = () => {
       console.log('Sending meal data:', cleanData); // Debug log
       return meals.create(cleanData);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+    queryKey: ['chef-meals', getChefId()],
+  });
       navigate('/chef/meals');
     },
     onError: (error) => {

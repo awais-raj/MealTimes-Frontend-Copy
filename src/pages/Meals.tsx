@@ -21,21 +21,23 @@ const Meals = () => {
     queryFn: meals.getAll,
   });
 
-  const orderMutation = useMutation({
-    mutationFn: (orderData: any) => orders.create(orderData),
-    onSuccess: (response) => {
-      setSelectedMeals([]);
-      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
-      setOrderResult({ success: true, message: 'Order placed successfully!' });
-      setShowOrderModal(true);
-    },
-    onError: (error: any) => {
-      console.error('Order failed:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to place order. Please try again.';
-      setOrderResult({ success: false, message: errorMessage });
-      setShowOrderModal(true);
-    },
-  });
+const employeeId = user?.employee?.employeeID;
+
+const orderMutation = useMutation({
+  mutationFn: (orderData: any) => orders.create(orderData),
+  onSuccess: (response) => {
+    setSelectedMeals([]);
+    queryClient.invalidateQueries({ queryKey: ['employee-orders', employeeId] }); // ✅ Fix here
+    setOrderResult({ success: true, message: 'Order placed successfully!' });
+    setShowOrderModal(true);
+  },
+  onError: (error: any) => {
+    console.error('Order failed:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to place order. Please try again.';
+    setOrderResult({ success: false, message: errorMessage });
+    setShowOrderModal(true);
+  },
+});
 
   const allMeals = mealsResponse?.data || [];
 

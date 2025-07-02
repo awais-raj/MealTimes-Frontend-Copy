@@ -29,7 +29,7 @@ const UserManagement = () => {
 
   const addAdminMutation = useMutation({
     mutationFn: async (data: AdminForm) => {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://localhost:7000'}/api/User/register/admin`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://localhost:7000'}/User/register/admin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
