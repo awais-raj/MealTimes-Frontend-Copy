@@ -61,6 +61,29 @@ export const auth = {
   }
 };
 
+// ---------- Password Reset ----------
+export const passwordReset = {
+  forgotPassword: async (email: string) => {
+    const response = await axios.post(`${API_URL}/PasswordReset/forgot-password`, { email });
+    return response.data;
+  },
+  validateToken: async (token: string, email: string) => {
+    const response = await axios.get(`${API_URL}/PasswordReset/validate-token`, {
+      params: { token, email }
+    });
+    return response.data;
+  },
+  resetPassword: async (data: {
+    token: string;
+    email: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) => {
+    const response = await axios.post(`${API_URL}/PasswordReset/reset-password`, data);
+    return response.data;
+  }
+};
+
 // Subscription Plans API
 export const subscriptionPlans = {
   getAll: async () => {

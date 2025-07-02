@@ -15,6 +15,7 @@ import Support from './pages/Support';
 import ChefApplication from './pages/ChefApplication';
 import DeliveryPersonApplication from './pages/DeliveryPersonApplication';
 import PublicMeals from './pages/PublicMeals';
+import ResetPassword from './pages/ResetPassword';
 
 // Protected Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -112,6 +113,7 @@ function App() {
                   <Route path="/" element={<Home />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/chef-application" element={<ChefApplication />} />
                   <Route path="/delivery-application" element={<DeliveryPersonApplication />} />
                   <Route path="/meals" element={<PublicMeals />} />
