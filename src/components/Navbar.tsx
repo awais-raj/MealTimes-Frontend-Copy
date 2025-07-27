@@ -21,6 +21,7 @@ export default function Navbar() {
         return [
           { to: '/admin/dashboard', label: 'Dashboard' },
           { to: '/admin/users', label: 'Users' },
+          { to: '/admin/locations', label: 'Locations' },
           { to: '/admin/subscription-plans', label: 'Subscription Plans' },
           { to: '/admin/reports', label: 'Reports' },
         ];
@@ -28,12 +29,14 @@ export default function Navbar() {
         return [
           { to: '/corporate/dashboard', label: 'Dashboard' },
           { to: '/corporate/subscription-plans', label: 'Subscription Plans' },
+          { to: '/corporate/location-setup', label: 'Location Setup' },
           { to: '/corporate/account', label: 'Account' },
         ];
       case 'Employee':
         return [
           { to: '/employee/dashboard', label: 'Dashboard' },
           { to: '/employee/meals', label: 'Browse Meals' },
+          { to: '/employee/nearby-meals', label: 'Nearby Meals' },
           { to: '/employee/preferences', label: 'Preferences' },
         ];
       case 'Chef':
@@ -41,6 +44,7 @@ export default function Navbar() {
           { to: '/chef/dashboard', label: 'Dashboard' },
           { to: '/chef/meals', label: 'My Meals' },
           { to: '/chef/upload-meal', label: 'Upload Meal' },
+          { to: '/chef/location-setup', label: 'Location Setup' },
           { to: '/chef/orders', label: 'Orders' },
           { to: '/chef/profile', label: 'Profile' },
         ];
