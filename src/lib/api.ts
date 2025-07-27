@@ -431,3 +431,68 @@ export const tracking = {
 };
 
 export default api;
+
+// ---------- Location Management ----------
+export const locations = {
+  // Admin location management
+  create: async (data: any) => {
+    const response = await api.post('/Location', data);
+    return response.data;
+  },
+  getById: async (id: string) => {
+    const response = await api.get(`/Location/${id}`);
+    return response.data;
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.put(`/Location/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/Location/${id}`);
+    return response.data;
+  },
+  
+  // Geocoding services
+  geocodeAddress: async (address: string) => {
+    const response = await api.post('/Location/geocode', { address });
+    return response.data;
+  },
+  reverseGeocode: async (latitude: number, longitude: number) => {
+    const response = await api.get('/Location/reverse-geocode', {
+      params: { latitude, longitude }
+    });
+    return response.data;
+  },
+  
+  // Nearby search
+  getNearbyChefs: async (filter: any) => {
+    const response = await api.post('/Location/nearby-chefs', filter);
+    return response.data;
+  },
+  getNearbyMeals: async (filter: any) => {
+    const response = await api.post('/Location/nearby-meals', filter);
+    return response.data;
+  },
+  
+  // Distance calculation
+  calculateDeliveryDistance: async (chefId: number, employeeId: number) => {
+    const response = await api.get('/Location/delivery-distance', {
+      params: { chefId, employeeId }
+    });
+    return response.data;
+  },
+  
+  // Location assignment
+  assignToChef: async (chefId: number, locationData: any) => {
+    const response = await api.post(`/Location/assign/chef/${chefId}`, locationData);
+    return response.data;
+  },
+  assignToCompany: async (companyId: number, locationData: any) => {
+    const response = await api.post(`/Location/assign/company/${companyId}`, locationData);
+    return response.data;
+  },
+  assignToEmployee: async (employeeId: number, locationData: any) => {
+    const response = await api.post(`/Location/assign/employee/${employeeId}`, locationData);
+    return response.data;
+  }
+};
