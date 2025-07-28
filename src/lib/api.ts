@@ -496,3 +496,99 @@ export const locations = {
     return response.data;
   }
 };
+
+// ---------- Business Management ----------
+export const business = {
+  // Commission management
+  calculateCommission: async (orderId: number) => {
+    const response = await api.post(`/Business/commission/calculate/${orderId}`);
+    return response.data;
+  },
+  getCommissionsByChef: async (chefId: number, startDate?: string, endDate?: string) => {
+    const params: any = {};
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    const response = await api.get(`/Business/commission/chef/${chefId}`, { params });
+    return response.data;
+  },
+  getAllCommissions: async (startDate?: string, endDate?: string) => {
+    const params: any = {};
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    const response = await api.get('/Business/commission/all', { params });
+    return response.data;
+  },
+
+  // Payout management
+  createChefPayout: async (data: {
+    chefID: number;
+    payoutPeriod: string;
+    periodStart: string;
+    periodEnd: string;
+  }) => {
+    const response = await api.post('/Business/payout/create', data);
+    return response.data;
+  },
+  getChefPayouts: async (chefId?: number, status?: string) => {
+    const params: any = {};
+    if (chefId) params.chefId = chefId;
+    if (status) params.status = status;
+    const response = await api.get('/Business/payout', { params });
+    return response.data;
+  },
+  updatePayoutStatus: async (data: {
+    payoutID: number;
+    status: string;
+    paymentMethod?: string;
+    paymentReference?: string;
+    notes?: string;
+  }) => {
+    const response = await api.put('/Business/payout/status', data);
+    return response.data;
+  },
+  getPendingPayouts: async () => {
+    const response = await api.get('/Business/payout/pending');
+    return response.data;
+  },
+  processWeeklyPayouts: async () => {
+    const response = await api.post('/Business/payout/process-weekly');
+    return response.data;
+  },
+  processMonthlyPayouts: async () => {
+    const response = await api.post('/Business/payout/process-monthly');
+    return response.data;
+  },
+
+  // Analytics and reporting
+  getBusinessAnalytics: async (startDate?: string, endDate?: string) => {
+    const params: any = {};
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    const response = await api.get('/Business/analytics', { params });
+    return response.data;
+  },
+  getProfitLossReport: async (startDate: string, endDate: string, period: string = 'Monthly') => {
+    const response = await api.get('/Business/report/profit-loss', {
+      params: { startDate, endDate, period }
+    });
+    return response.data;
+  },
+  getDailyMetrics: async (date: string) => {
+    const response = await api.get('/Business/metrics/daily', {
+      params: { date }
+    });
+    return response.data;
+  },
+  getMetricsRange: async (startDate: string, endDate: string) => {
+    const response = await api.get('/Business/metrics/range', {
+      params: { startDate, endDate }
+    });
+    return response.data;
+  },
+  processDailyMetrics: async (date: string) => {
+    const response = await api.post('/Business/metrics/process-daily', null, {
+      params: { date }
+    });
+    return response.data;
+  }
+};

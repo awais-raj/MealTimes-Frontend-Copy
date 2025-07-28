@@ -23,6 +23,7 @@ export default function Navbar() {
           { to: '/admin/users', label: 'Users' },
           { to: '/admin/locations', label: 'Locations' },
           { to: '/admin/subscription-plans', label: 'Subscription Plans' },
+          { to: '/admin/business', label: 'Business' },
           { to: '/admin/reports', label: 'Reports' },
         ];
       case 'Company':

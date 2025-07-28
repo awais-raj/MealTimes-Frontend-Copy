@@ -47,6 +47,7 @@ import LocationManagement from './pages/admin/LocationManagement';
 import ChefLocationSetup from './pages/chef/LocationSetup';
 import CompanyLocationSetup from './pages/corporate/LocationSetup';
 import NearbyMeals from './pages/employee/NearbyMeals';
+import BusinessManagement from './pages/admin/BusinessManagement';
 
 import DeliveryDashboard from './pages/delivery/Dashboard';
 
@@ -204,6 +205,14 @@ function App() {
                     element={
                       <ProtectedRoute allowedRoles={['Admin']}>
                         <LocationManagement />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/admin/business" 
+                    element={
+                      <ProtectedRoute allowedRoles={['Admin']}>
+                        <BusinessManagement />
                       </ProtectedRoute>
                     } 
                   />
